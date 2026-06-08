@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO / GEO Scanner</title>
+  <style>
+    /* ── Reset & base ───────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --card:      #1c2333;
+      --border:    #30363d;
+      --primary:   #58a6ff;
+      --pass:      #3fb950;
+      --warn:      #d29922;
+      --fail:      #f85149;
+      --info:      #79c0ff;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --font-mono: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      --radius:    8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────────────── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Header ─────────────────────────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 32px 0 28px;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #58a6ff, #bc8cff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
+
+    /* ── Badges ─────────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+    }
+    .badge-pass    { background: rgba(63,185,80,.18);  color: var(--pass); border: 1px solid rgba(63,185,80,.35); }
+    .badge-warning { background: rgba(210,153,34,.18); color: var(--warn); border: 1px solid rgba(210,153,34,.35); }
+    .badge-fail    { background: rgba(248,81,73,.18);  color: var(--fail); border: 1px solid rgba(248,81,73,.35); }
+    .badge-info    { background: rgba(121,192,255,.18);color: var(--info); border: 1px solid rgba(121,192,255,.35); }
+
+    /* ── Cards ──────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    /* ── Sections ───────────────────────────────────────────────────────────── */
+    section { padding: 40px 0; }
+    .hidden { display: none !important; }
+
+    /* ── Tabs ───────────────────────────────────────────────────────────────── */
+    .tab-bar {
+      display: flex; gap: 0; margin: 0 auto 20px;
+      max-width: 400px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px 16px;
+      background: transparent; border: none;
+      color: var(--muted); font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      text-align: center;
+    }
+    .tab-btn:hover { color: var(--text); background: rgba(255,255,255,.03); }
+    .tab-btn.active {
+      background: var(--primary); color: #0d1117;
+    }
+
+    /* ── Upload area ────────────────────────────────────────────────────────── */
+    #upload-section { text-align: center; }
+
+    #csv-upload-area, #url-scan-area { transition: opacity 0.2s; }
+    #url-scan-area.hidden { display: none; }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 60px 40px;
+      cursor: pointer;
+      transition: all 0.2s;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary);
+      background: rgba(88,166,255,.06);
+    }
+    .drop-zone .icon { font-size: 3rem; line-height: 1; }
+    .drop-zone h2 { margin: 16px 0 8px; font-size: 1.2rem; color: var(--text); }
+    .drop-zone p  { color: var(--muted); font-size: 0.9rem; }
+    .drop-zone p span { color: var(--primary); text-decoration: underline; cursor: pointer; }
+
+    #file-input { display: none; }
+
+    .format-hint {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 16px;
+      margin: 16px auto 0; max-width: 360px;
+      font-size: 0.8rem; color: var(--muted); font-family: var(--font-mono);
+    }
+
+    /* ── URL directa form ──────────────────────────────────────────────────── */
+    .url-form {
+      max-width: 560px; margin: 0 auto;
+      text-align: left;
+    }
+    .url-form label {
+      display: block; font-size: 0.8rem; font-weight: 600;
+      color: var(--muted); margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .url-form input[type="url"],
+    .url-form textarea {
+      width: 100%; padding: 12px 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 0.9rem;
+      outline: none; transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .url-form input[type="url"]:focus,
+    .url-form textarea:focus {
+      border-color: var(--primary);
+    }
+    .url-form textarea {
+      min-height: 120px; resize: vertical;
+      font-family: var(--font-mono); font-size: 0.85rem;
+    }
+    .url-form .field { margin-bottom: 16px; }
+    .url-form .hint {
+      font-size: 0.75rem; color: var(--muted); margin-top: 4px;
+    }
+    .url-form .btn-wrap { text-align: center; margin-top: 8px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: 6px; border: none;
+      font-size: 0.875rem; font-weight: 600; cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover  { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: #0d1117; }
+    .btn-ghost   { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .btn-success { background: var(--pass);    color: #0d1117; }
+
+    /* ── Progress section ───────────────────────────────────────────────────── */
+    #scanning-section .header-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+    }
+    .scan-meta { display: flex; gap: 20px; flex-wrap: wrap; }
+    .scan-meta .stat { display: flex; flex-direction: column; align-items: center; }
+    .scan-meta .stat-val { font-size: 1.5rem; font-weight: 700; color: var(--primary); line-height: 1; }
+    .scan-meta .stat-lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+
+    .progress-bar-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; height: 8px; overflow: hidden; margin-bottom: 20px;
+    }
+    #progress-bar {
+      height: 100%; width: 0;
+      background: linear-gradient(90deg, var(--primary), #bc8cff);
+      transition: width 0.4s ease;
+      border-radius: 8px;
+    }
+
+    /* ── Console ────────────────────────────────────────────────────────────── */
+    .console-wrap {
+      background: #010409;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .console-toolbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 8px 14px; display: flex; align-items: center; gap: 8px;
+    }
+    .console-toolbar span { font-size: 0.75rem; color: var(--muted); }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red    { background: #ff5f57; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green  { background: #28c840; }
+
+    #console-log {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.7;
+      padding: 14px 16px;
+      height: 400px;
+      overflow-y: auto;
+      color: #adbac7;
+    }
+    #console-log::-webkit-scrollbar       { width: 6px; }
+    #console-log::-webkit-scrollbar-track { background: transparent; }
+    #console-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .log-line         { display: block; margin: 0; padding: 0; }
+    .log-line.sep     { color: #30363d; }
+    .log-line.url     { color: var(--primary); font-weight: 600; }
+    .log-line.pass    { color: var(--pass); }
+    .log-line.warning { color: var(--warn); }
+    .log-line.fail    { color: var(--fail); }
+    .log-line.info    { color: var(--info); }
+    .log-line.muted   { color: #5a6370; }
+    .log-line.bold    { color: #e6edf3; font-weight: 600; }
+
+    /* ── Results section ────────────────────────────────────────────────────── */
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .results-header h2 { font-size: 1.3rem; }
+
+    .export-btns { display: flex; gap: 8px; }
+
+    /* Summary stat cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px; text-align: center;
+    }
+    .stat-card .num { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .stat-card .lbl { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+    .stat-card.total-card .num { color: var(--primary); }
+    .stat-card.pass-card  .num { color: var(--pass); }
+    .stat-card.warn-card  .num { color: var(--warn); }
+    .stat-card.fail-card  .num { color: var(--fail); }
+
+    /* Results table */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    .results-table {
+      width: 100%; border-collapse: collapse; font-size: 12.5px;
+      white-space: nowrap;
+    }
+    .results-table th {
+      background: var(--surface);
+      padding: 10px 10px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .results-table th:first-child { text-align: left; padding-left: 16px; min-width: 220px; }
+    .results-table th:nth-child(2){ min-width: 80px; }
+
+    .results-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(48,54,61,.6);
+      text-align: center;
+      vertical-align: middle;
+    }
+    .results-table td:first-child { text-align: left; padding-left: 16px; }
+    .results-table tr:last-child td { border-bottom: none; }
+    .results-table tbody tr:hover   { background: rgba(88,166,255,.05); }
+
+    .url-cell a {
+      color: var(--primary); text-decoration: none;
+      max-width: 200px; display: inline-block;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .url-cell a:hover { text-decoration: underline; }
+    .url-cell .err-msg { display: block; color: var(--fail); font-size: 11px; }
+
+    .score-chip {
+      display: inline-block;
+      padding: 2px 10px; border-radius: 20px;
+      font-weight: 700; font-size: 12px;
+    }
+    .score-high   { background: rgba(63,185,80,.2);  color: var(--pass); }
+    .score-medium { background: rgba(210,153,34,.2); color: var(--warn); }
+    .score-low    { background: rgba(248,81,73,.2);  color: var(--fail); }
+
+    .cell-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 16px; line-height: 1; padding: 2px;
+      border-radius: 4px; transition: background .15s;
+    }
+    .cell-btn:hover { background: rgba(255,255,255,.1); }
+
+    /* ── Tooltip ────────────────────────────────────────────────────────────── */
+    #tooltip {
+      position: fixed; z-index: 9999;
+      background: #2a3040;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      max-width: 320px;
+      pointer-events: none;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    /* ── Per-check summary bar ──────────────────────────────────────────────── */
+    .check-summary {
+      margin-bottom: 32px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .check-row {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .check-row-name { font-size: 12px; font-weight: 600; color: var(--text); }
+    .check-row-bar  { display: flex; height: 5px; border-radius: 3px; overflow: hidden; gap: 1px; }
+    .bar-pass    { background: var(--pass); }
+    .bar-warning { background: var(--warn); }
+    .bar-fail    { background: var(--fail); }
+    .bar-info    { background: var(--info); }
+    .check-row-nums { display: flex; gap: 10px; font-size: 11px; color: var(--muted); }
+    .check-row-nums .n-pass    { color: var(--pass); }
+    .check-row-nums .n-warning { color: var(--warn); }
+    .check-row-nums .n-fail    { color: var(--fail); }
+
+    /* ── Responsive ─────────────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.5rem; }
+      .drop-zone { padding: 40px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="container">
+    <h1>🔍 SEO / GEO Scanner</h1>
+    <p>Análisis completo de Title, Meta, Headings, Canonical, Schema, Sitemap, Robots &amp; LLMs.txt</p>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+
+    <!-- ── UPLOAD SECTION ──────────────────────────────────────────────────── -->
+    <section id="upload-section">
+      <!-- Tab switcher -->
+      <div class="tab-bar" id="mode-tabs">
+        <button class="tab-btn active" data-mode="csv">📋 Subir CSV</button>
+        <button class="tab-btn" data-mode="url">🔗 URL Directa</button>
+      </div>
+
+      <!-- CSV upload area -->
+      <div id="csv-upload-area">
+        <div class="drop-zone card" id="drop-zone">
+          <div class="icon">📋</div>
+          <h2>Soltá tu archivo CSV aquí</h2>
+          <p>o <span id="browse-link">hacé clic para seleccionar</span></p>
+          <input type="file" id="file-input" accept=".csv,.txt" />
+          <div class="format-hint">
+            <span>📄</span>
+            <span>Una URL por línea · sin headers · ej: <em>atlanticf.com</em></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- URL directa area -->
+      <div id="url-scan-area" class="hidden">
+        <div class="card url-form">
+          <div class="field">
+            <label for="urls-input">🌐 URLs (una por línea)</label>
+            <textarea id="urls-input" placeholder="https://ejemplo.com&#10;https://ejemplo2.com&#10;https://ejemplo3.com/pagina"></textarea>
+            <div class="hint">Misma funcionalidad que el CSV, pero pegando las URLs directamente</div>
+          </div>
+          <div class="btn-wrap">
+            <button class="btn btn-primary" id="btn-scan-url">🔍 Escanear URLs</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="upload-error" style="color:var(--fail);text-align:center;margin-top:12px;font-size:0.9rem;"></div>
+    </section>
+
+    <!-- ── SCANNING SECTION ────────────────────────────────────────────────── -->
+    <section id="scanning-section" class="hidden">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="header-row">
+          <div>
+            <h2 style="font-size:1.1rem;margin-bottom:4px;">Escaneando…</h2>
+            <p id="current-url-label" style="font-size:0.85rem;color:var(--muted);">Inicializando</p>
+          </div>
+          <div class="scan-meta">
+            <div class="stat">
+              <span class="stat-val" id="stat-done">0</span>
+              <span class="stat-lbl">Hechas</span>
+            </div>
+            <div class="stat">
+              <span class="stat-val" id="stat-total">0</span>
+              <span class="stat-lbl">Total</span>
+            </div>
+            <div class="stat">
+              <span class="stat-val" id="stat-elapsed">0s</span>
+              <span class="stat-lbl">Tiempo</span>
+            </div>
+          </div>
+        </div>
+        <div class="progress-bar-wrap">
+          <div id="progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="console-wrap">
+        <div class="console-toolbar">
+          <div class="dot dot-red"></div>
+          <div class="dot dot-yellow"></div>
+          <div class="dot dot-green"></div>
+          <span>Terminal — logs en tiempo real</span>
+        </div>
+        <pre id="console-log"><span class="log-line muted">Esperando inicio del escaneo…</span>
+</pre>
+      </div>
+    </section>
+
+    <!-- ── RESULTS SECTION ─────────────────────────────────────────────────── -->
+    <section id="results-section" class="hidden">
+      <div class="results-header">
+        <h2>📊 Resultados del escaneo</h2>
+        <div class="export-btns">
+          <button class="btn btn-ghost" id="btn-export-csv">⬇ CSV</button>
+          <button class="btn btn-ghost" id="btn-export-json">⬇ JSON</button>
+          <button class="btn btn-ghost" id="btn-export-pdf">⬇ PDF</button>
+          <button class="btn btn-primary" id="btn-new-scan">+ Nuevo escaneo</button>
+        </div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="summary-grid" id="summary-grid"></div>
+
+      <!-- Per-check breakdown -->
+      <div class="check-summary" id="check-summary"></div>
+
+      <!-- Results table -->
+      <div class="table-wrap">
+        <table class="results-table" id="results-table">
+          <thead id="results-thead"></thead>
+          <tbody id="results-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div><!-- /.container -->
+</main>
+
+<!-- Tooltip -->
+<div id="tooltip"></div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const CHECK_KEYS = [
+  'title','metaDescription','h1','headingHierarchy',
+  'emptyHeadings','canonical','imageAlts','schema',
+  'sitemap','robots','llms'
+];
+const CHECK_LABELS = {
+  title:            'Title Tag',
+  metaDescription:  'Meta Desc.',
+  h1:               'H1',
+  headingHierarchy: 'H. Hierarchy',
+  emptyHeadings:    'Empty H.',
+  canonical:        'Canonical',
+  imageAlts:        'Img Alts',
+  schema:           'Schema',
+  sitemap:          'Sitemap',
+  robots:           'Robots',
+  llms:             'LLMs.txt',
+};
+const STATUS_ICON = { pass: '✅', warning: '⚠️', fail: '❌', info: 'ℹ️' };
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentScanId  = null;
+let scanStartTime  = null;
+let elapsedTimer   = null;
+let allResults     = [];
+let currentSummary = null;
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const uploadSection   = document.getElementById('upload-section');
+const scanningSection = document.getElementById('scanning-section');
+const resultsSection  = document.getElementById('results-section');
+const dropZone        = document.getElementById('drop-zone');
+const fileInput       = document.getElementById('file-input');
+const browseLink      = document.getElementById('browse-link');
+const uploadError     = document.getElementById('upload-error');
+const consoleLog      = document.getElementById('console-log');
+const progressBar     = document.getElementById('progress-bar');
+const statDone        = document.getElementById('stat-done');
+const statTotal       = document.getElementById('stat-total');
+const statElapsed     = document.getElementById('stat-elapsed');
+const currentUrlLabel = document.getElementById('current-url-label');
+const tooltip         = document.getElementById('tooltip');
+
+// ── Mode tabs ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('#mode-tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#mode-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const mode = btn.dataset.mode;
+    document.getElementById('csv-upload-area').classList.toggle('hidden', mode !== 'csv');
+    document.getElementById('url-scan-area').classList.toggle('hidden', mode !== 'url');
+    document.getElementById('upload-error').textContent = '';
+  });
+});
+
+// ── Upload interactions ───────────────────────────────────────────────────────
+browseLink.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('click',   () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) startScan(e.target.files[0]); });
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave',()=> dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) startScan(file);
+});
+
+// ── URL directa scan ──────────────────────────────────────────────────────────
+document.getElementById('btn-scan-url').addEventListener('click', () => {
+  const urlsRaw = document.getElementById('urls-input').value.trim();
+  if (!urlsRaw) {
+    document.getElementById('upload-error').textContent = 'Por favor ingresá al menos una URL.';
+    return;
+  }
+  document.getElementById('upload-error').textContent = '';
+  startUrlScan(urlsRaw);
+});
+
+// ── New scan button ────────────────────────────────────────────────────────────
+document.getElementById('btn-new-scan').addEventListener('click', () => {
+  allResults = []; currentScanId = null;
+  clearInterval(elapsedTimer);
+  consoleLog.innerHTML = '<span class="log-line muted">Esperando inicio del escaneo…</span>\n';
+  progressBar.style.width = '0';
+  fileInput.value = '';
+  document.getElementById('urls-input').value = '';
+  showSection('upload');
+});
+
+// ── Export buttons ─────────────────────────────────────────────────────────────
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+  if (currentScanId) window.open(`/api/results/${currentScanId}?format=csv`);
+});
+document.getElementById('btn-export-json').addEventListener('click', () => {
+  if (currentScanId) window.open(`/api/results/${currentScanId}?format=json`);
+});
+document.getElementById('btn-export-pdf').addEventListener('click', () => {
+  if (currentScanId) window.open(`/api/results/${currentScanId}?format=pdf`);
+});
+
+// ── Section switcher ──────────────────────────────────────────────────────────
+function showSection(name) {
+  uploadSection  .classList.toggle('hidden', name !== 'upload');
+  scanningSection.classList.toggle('hidden', name !== 'scanning');
+  resultsSection .classList.toggle('hidden', name !== 'results');
+}
+
+// ── Start URL scan ────────────────────────────────────────────────────────────
+async function startUrlScan(urlsRaw) {
+  document.getElementById('upload-error').textContent = '';
+
+  showSection('scanning');
+  consoleLog.innerHTML = '';
+  allResults = [];
+  scanStartTime = Date.now();
+
+  // Elapsed timer
+  clearInterval(elapsedTimer);
+  elapsedTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - scanStartTime) / 1000);
+    statElapsed.textContent = s < 60 ? `${s}s` : `${Math.floor(s/60)}m${s%60}s`;
+  }, 1000);
+
+  let scanMeta;
+  try {
+    const resp = await fetch('/api/scan-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ urls: urlsRaw }),
+    });
+    const json = await resp.json();
+    if (!resp.ok) throw new Error(json.error || 'Error al escanear URLs');
+    scanMeta = json;
+  } catch (err) {
+    showSection('upload');
+    document.getElementById('upload-error').textContent = `Error: ${err.message}`;
+    clearInterval(elapsedTimer);
+    return;
+  }
+
+  currentScanId = scanMeta.scanId;
+  statTotal.textContent = scanMeta.total;
+  statDone.textContent  = '0';
+
+  // Connect SSE
+  const es = new EventSource(`/api/events/${currentScanId}`);
+  es.onmessage = e => handleEvent(JSON.parse(e.data), es);
+  es.onerror   = () => appendLog('[SSE] Conexión interrumpida', 'fail');
+}
+
+// ── Start scan (CSV) ──────────────────────────────────────────────────────────
+async function startScan(file) {
+  uploadError.textContent = '';
+
+  if (!/\.(csv|txt)$/i.test(file.name)) {
+    uploadError.textContent = 'Solo se aceptan archivos .csv o .txt';
+    return;
+  }
+
+  showSection('scanning');
+  consoleLog.innerHTML = '';
+  allResults = [];
+  scanStartTime = Date.now();
+
+  // Elapsed timer
+  clearInterval(elapsedTimer);
+  elapsedTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - scanStartTime) / 1000);
+    statElapsed.textContent = s < 60 ? `${s}s` : `${Math.floor(s/60)}m${s%60}s`;
+  }, 1000);
+
+  // Upload
+  const fd = new FormData();
+  fd.append('file', file);
+
+  let scanMeta;
+  try {
+    const resp = await fetch('/api/scan', { method: 'POST', body: fd });
+    const json = await resp.json();
+    if (!resp.ok) throw new Error(json.error || 'Error al subir archivo');
+    scanMeta = json;
+  } catch (err) {
+    showSection('upload');
+    uploadError.textContent = `Error: ${err.message}`;
+    clearInterval(elapsedTimer);
+    return;
+  }
+
+  currentScanId = scanMeta.scanId;
+  statTotal.textContent = scanMeta.total;
+  statDone.textContent  = '0';
+
+  // Connect SSE
+  const es = new EventSource(`/api/events/${currentScanId}`);
+  es.onmessage = e => handleEvent(JSON.parse(e.data), es);
+  es.onerror   = () => appendLog('[SSE] Conexión interrumpida', 'fail');
+}
+
+// ── SSE event handler ─────────────────────────────────────────────────────────
+function handleEvent(event, es) {
+  switch (event.type) {
+    case 'connected':
+      appendLog('Conectado al servidor — iniciando escaneo…', 'info');
+      break;
+
+    case 'start':
+      appendLog(`${'━'.repeat(60)}`, 'sep');
+      appendLog(`🚀  INICIANDO ESCANEO — ${event.total} URL(s)`, 'bold');
+      appendLog(`${'━'.repeat(60)}`, 'sep');
+      break;
+
+    case 'url_start':
+      appendLog('', 'muted');
+      appendLog(`📡  [${event.current}/${event.total}]  ${event.url}`, 'url');
+      appendLog(`${'─'.repeat(60)}`, 'sep');
+      updateProgress(event.current, event.total);
+      currentUrlLabel.textContent = event.url;
+      statDone.textContent = event.current - 1;
+      break;
+
+    case 'check': {
+      const icon  = STATUS_ICON[event.status] ?? '  ';
+      const label = (CHECK_LABELS[event.check] ?? event.check).padEnd(16);
+      appendLog(`  ${icon}  ${label}  ${event.message}`, event.status);
+      break;
+    }
+
+    case 'url_done':
+      appendLog(`  ⏱   Completado en ${event.duration}ms`, 'muted');
+      if (event.result) allResults.push(event.result);
+      statDone.textContent = event.current;
+      break;
+
+    case 'error':
+      appendLog(`💥  ERROR: ${event.message}`, 'fail');
+      break;
+
+    case 'log':
+      appendLog(event.message, 'muted');
+      break;
+
+    case 'complete':
+      appendLog('', 'muted');
+      appendLog(`${'━'.repeat(60)}`, 'sep');
+      appendLog(`🏁  ESCANEO COMPLETADO — ${event.total} URLs procesadas`, 'bold');
+      appendLog(`${'━'.repeat(60)}`, 'sep');
+      clearInterval(elapsedTimer);
+      progressBar.style.width = '100%';
+      statDone.textContent = event.total;
+      currentSummary = event.summary;
+      if (event.results) allResults = event.results;
+      es.close();
+      setTimeout(() => renderResults(), 400);
+      break;
+  }
+}
+
+// ── Console helpers ───────────────────────────────────────────────────────────
+function appendLog(text, cls) {
+  const span = document.createElement('span');
+  span.className = `log-line${cls ? ' ' + cls : ''}`;
+  span.textContent = text;
+  consoleLog.appendChild(span);
+  consoleLog.appendChild(document.createTextNode('\n'));
+  consoleLog.scrollTop = consoleLog.scrollHeight;
+}
+
+function updateProgress(done, total) {
+  progressBar.style.width = `${Math.round(done / total * 100)}%`;
+}
+
+// ── Score calculator ───────────────────────────────────────────────────────────
+function calcScore(checks) {
+  let total = 0, max = CHECK_KEYS.length * 2;
+  for (const k of CHECK_KEYS) {
+    const s = checks[k]?.status;
+    if (s === 'pass')    total += 2;
+    else if (s === 'warning' || s === 'info') total += 1;
+  }
+  return Math.round(total / max * 100);
+}
+
+// ── Render results ─────────────────────────────────────────────────────────────
+function renderResults() {
+  showSection('results');
+
+  // ── Summary stat cards ──────────────────────────────────────────────────────
+  const totalUrls = allResults.length;
+  let totalPass = 0, totalWarn = 0, totalFail = 0;
+
+  for (const r of allResults) {
+    for (const k of CHECK_KEYS) {
+      const s = r.checks[k]?.status;
+      if (s === 'pass') totalPass++;
+      else if (s === 'warning' || s === 'info') totalWarn++;
+      else if (s === 'fail') totalFail++;
+    }
+  }
+
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="stat-card total-card"><div class="num">${totalUrls}</div><div class="lbl">URLs Escaneadas</div></div>
+    <div class="stat-card pass-card"><div class="num">${totalPass}</div><div class="lbl">Checks Pasados</div></div>
+    <div class="stat-card warn-card"><div class="num">${totalWarn}</div><div class="lbl">Advertencias</div></div>
+    <div class="stat-card fail-card"><div class="num">${totalFail}</div><div class="lbl">Checks Fallidos</div></div>
+  `;
+
+  // ── Per-check breakdown ─────────────────────────────────────────────────────
+  const checkSummaryEl = document.getElementById('check-summary');
+  checkSummaryEl.innerHTML = '';
+
+  if (currentSummary?.byCheck) {
+    for (const k of CHECK_KEYS) {
+      const c = currentSummary.byCheck[k] ?? {};
+      const p = c.pass || 0, w = c.warning || 0, f = c.fail || 0, i = c.info || 0;
+      const tot = p + w + f + i || 1;
+      const pPct = (p/tot*100).toFixed(0);
+      const wPct = (w/tot*100).toFixed(0);
+      const fPct = (f/tot*100).toFixed(0);
+      const iPct = (i/tot*100).toFixed(0);
+
+      checkSummaryEl.insertAdjacentHTML('beforeend', `
+        <div class="check-row">
+          <div class="check-row-name">${CHECK_LABELS[k]}</div>
+          <div class="check-row-bar">
+            <div class="bar-pass"    style="flex:${pPct}"></div>
+            <div class="bar-warning" style="flex:${wPct}"></div>
+            <div class="bar-fail"    style="flex:${fPct}"></div>
+            <div class="bar-info"    style="flex:${iPct}"></div>
+          </div>
+          <div class="check-row-nums">
+            ${p ? `<span class="n-pass">✅ ${p}</span>` : ''}
+            ${w ? `<span class="n-warning">⚠️ ${w}</span>` : ''}
+            ${f ? `<span class="n-fail">❌ ${f}</span>` : ''}
+            ${i ? `<span style="color:var(--info)">ℹ️ ${i}</span>` : ''}
+          </div>
+        </div>
+      `);
+    }
+  }
+
+  // ── Results table ──────────────────────────────────────────────────────────
+  const thead = document.getElementById('results-thead');
+  const tbody = document.getElementById('results-tbody');
+
+  thead.innerHTML = `<tr>
+    <th>#  URL</th>
+    <th>Score</th>
+    ${CHECK_KEYS.map(k => `<th title="${CHECK_LABELS[k]}">${CHECK_LABELS[k]}</th>`).join('')}
+  </tr>`;
+
+  tbody.innerHTML = '';
+
+  allResults.forEach((r, idx) => {
+    const score = calcScore(r.checks);
+    const scoreClass = score >= 80 ? 'score-high' : score >= 55 ? 'score-medium' : 'score-low';
+    const href = r.normalizedUrl || ('https://' + r.url);
+
+    const cells = CHECK_KEYS.map(k => {
+      const ch = r.checks[k];
+      if (!ch) return '<td>—</td>';
+      const icon = STATUS_ICON[ch.status] ?? '—';
+      const msg  = (ch.message || '').replace(/"/g, '&quot;');
+      return `<td><button class="cell-btn" data-tip="${msg}" title="${msg}">${icon}</button></td>`;
+    }).join('');
+
+    const errHtml = r.error ? `<span class="err-msg">${escHtml(r.error)}</span>` : '';
+
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td class="url-cell">
+          <span style="color:var(--muted);margin-right:8px;">${idx+1}</span>
+          <a href="${href}" target="_blank" rel="noopener">${escHtml(r.url)}</a>
+          ${errHtml}
+        </td>
+        <td><span class="score-chip ${scoreClass}">${score}%</span></td>
+        ${cells}
+      </tr>
+    `);
+  });
+
+  // Tooltip handlers (delegated)
+  document.getElementById('results-tbody').addEventListener('mouseover', e => {
+    const btn = e.target.closest('[data-tip]');
+    if (!btn) return;
+    tooltip.textContent = btn.dataset.tip;
+    tooltip.style.display = 'block';
+  });
+  document.getElementById('results-tbody').addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top  = (e.clientY - 10) + 'px';
+  });
+  document.getElementById('results-tbody').addEventListener('mouseout', e => {
+    if (!e.target.closest('[data-tip]')) tooltip.style.display = 'none';
+  });
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+</body>
+</html>

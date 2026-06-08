@@ -1,0 +1,17 @@
+{
+  "name": "seo-geo-scanner",
+  "version": "1.0.0",
+  "description": "SEO/GEO Scanner — Análisis completo de URLs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "express": "^4.21.2",
+    "multer": "^2.1.1",
+    "puppeteer": "^25.1.0"
+  }
+}
