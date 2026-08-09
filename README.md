@@ -1,11 +1,10 @@
-<p align="center">
-  <img src="https://iili.io/C1N0AB9.png" alt="SEO / GEO Scanner" width="100%">
-</p>
-
 # SEO / GEO Scanner 🔍
 
 Auditoría técnica SEO + optimización para buscadores de IA (GEO). Analizá URLs en batch, detectá problemas on-page, verificá recursos del sitio y exportá reportes profesionales en PDF, CSV o JSON.
 
+<p align="center">
+  <img src="https://iili.io/C1N0AB9.png" alt="SEO / GEO Scanner" width="100%">
+</p>
 ---
 
 ## ✨ Features
