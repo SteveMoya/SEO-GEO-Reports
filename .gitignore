@@ -3,3 +3,8 @@ urls.csv
 /node_modules
 
 .atl/
+
+# Environment files (never commit secrets)
+.env
+.env.*
+!.env.example
