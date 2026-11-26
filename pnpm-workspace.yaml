@@ -1,2 +1,6 @@
 allowBuilds:
   puppeteer: true
+minimumReleaseAgeExclude:
+  - '@puppeteer/browsers@3.3.0'
+  - puppeteer-core@25.19.0
+  - puppeteer@25.19.0
